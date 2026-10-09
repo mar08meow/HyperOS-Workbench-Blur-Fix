@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">AllApps 动态模糊修复</string>
+    <string name="settings_title">AllApps 动态模糊修复</string>
+    <string name="settings_desc">拖动下面的滑块，调整工作台模式「应用列表」背景的模糊强度。\n改完立即生效，不需要重启桌面。</string>
+    <string name="settings_value">模糊半径：%1$d / %2$d</string>
+    <string name="settings_status_ok">已连接 LSPosed，改动会立即应用。</string>
+    <string name="settings_status_no_service">未连接到 LSPosed 服务。请确认本模块已在 LSPosed 中启用，然后重新打开本页面。</string>
+    <string name="settings_restart_launcher">重启系统桌面</string>
+    <string name="settings_restart_hint">更新模块之后（重新安装 APK）需要重启系统桌面才能让新代码生效。\n点下面的按钮即可，无需手动操作。首次使用会请求 root 授权。</string>
+    <string name="settings_restart_running">正在重启系统桌面…</string>
+    <string name="settings_restart_ok">系统桌面已重启。</string>
+    <string name="settings_restart_failed">重启失败（exit=%1$d）。请确认已授予 root 权限，或手动执行：am force-stop com.miui.home</string>
 </resources>

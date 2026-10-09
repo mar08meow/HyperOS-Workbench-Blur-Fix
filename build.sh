@@ -74,6 +74,12 @@ APKSIGNER_JAR="$BT/lib/apksigner.jar"
 [ -f "$D8_JAR" ]        || { echo "[ERROR] 缺少 d8.jar" >&2; exit 1; }
 [ -f "$APKSIGNER_JAR" ] || { echo "[ERROR] 缺少 apksigner.jar" >&2; exit 1; }
 
+# R8/d8 优先用项目自带的新版：build-tools r34 自带的 R8 8.2.2 有 bug，
+# 处理 libxposed-service 里的某些 class（如 HookedTarget$State）会内部 NPE。
+if [ -f "$ROOT/libs/r8.jar" ]; then
+  D8_JAR="$(winpath "$ROOT/libs/r8.jar")"
+fi
+
 if [ -n "${PLATFORM_VER:-}" ]; then
   ANDROID_JAR="$SDK/platforms/$PLATFORM_VER/android.jar"
 else
@@ -90,11 +96,32 @@ if [ ! -f "$LX" ]; then
   exit 1
 fi
 
+# ---------- 定位 LibXposed Service / Interface（UI 侧访问 LSPosed 配置用）----------
+# 这两个都会被打进 APK：service 提供 XposedProvider 等运行期实现，
+# interface 提供 AIDL 生成的 IXposedService$Stub 等类。
+LXS="${LIBXPOSED_SERVICE_JAR:-$ROOT/libs/libxposed-service-classes.jar}"
+LXS="$(winpath "$LXS")"
+if [ ! -f "$LXS" ]; then
+  echo "[ERROR] 缺少 LibXposed Service: $LXS" >&2
+  echo "        请先运行: scripts/fetch-libxposed.sh" >&2
+  exit 1
+fi
+
+LXIF="${LIBXPOSED_INTERFACE_JAR:-$ROOT/libs/libxposed-interface-classes.jar}"
+LXIF="$(winpath "$LXIF")"
+if [ ! -f "$LXIF" ]; then
+  echo "[ERROR] 缺少 LibXposed Interface: $LXIF" >&2
+  echo "        请先运行: scripts/fetch-libxposed.sh" >&2
+  exit 1
+fi
+
 echo "JAVA      : $JAVA"
 "$JAVA" -version 2>&1 | head -1
 echo "aapt2     : $BT/aapt2$EXE"
 echo "android   : $ANDROID_JAR"
 echo "libxposed : $LX"
+echo "service   : $LXS"
+echo "interface : $LXIF"
 echo
 
 rm -rf "$B"
@@ -109,18 +136,22 @@ echo "[2/6] aapt2 link (manifest + R.java)"
 
 echo "[3/6] javac"
 "$JAVAC" -source 8 -target 8 -nowarn -encoding UTF-8 \
-  -cp "$ANDROID_JAR$SEP$LX" \
+  -cp "$ANDROID_JAR$SEP$LX$SEP$LXS$SEP$LXIF" \
   -d "$B/classes" \
   $(find "$ROOT/src" -name '*.java') $(find "$B/gen" -name '*.java')
 
 echo "[4/6] d8 (dex)"
+# 注意：$LXS（libxposed-service）和 $LXIF（libxposed-interface，含 AIDL 生成的
+# IXposedService$Stub）都运行在我们自己的进程里，必须打进 dex；
+# 而 $LX（libxposed-api）是 compileOnly，运行时由 LSPosed 提供，绝不能打进来。
 "$JAVA" -cp "$D8_JAR" com.android.tools.r8.D8 \
   --lib "$ANDROID_JAR" --min-api 29 --output "$B/dex" \
-  $(find "$B/classes" -name '*.class')
+  $(find "$B/classes" -name '*.class') "$LXS" "$LXIF"
 
 echo "[5/6] package + zipalign"
 cp "$B/base.apk" "$B/unsigned.apk"
-( cd "$B/dex" && "$JAR" uf "$B/unsigned.apk" classes.dex )
+# d8 可能产出多个 dex（classes.dex / classes2.dex ...），全部打进去
+( cd "$B/dex" && "$JAR" uf "$B/unsigned.apk" *.dex )
 ( cd "$ROOT" && "$JAR" uf "$B/unsigned.apk" \
     META-INF/xposed/java_init.list \
     META-INF/xposed/module.prop \
