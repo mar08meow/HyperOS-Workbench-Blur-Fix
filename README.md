@@ -85,7 +85,7 @@ com.miui.home.launcher.laptop.AllAppsBackground#showBlurEffect
 **构建**
 
 ```bash
-git clone https://github.com/ihatetheworld404x/HyperOS-Workbench-Blur-Fix.git
+git clone https://github.com/mar08meow/HyperOS-Workbench-Blur-Fix.git
 cd HyperOS-Workbench-Blur-Fix
 
 # 1. 下载 LibXposed API（Maven Central 的 artifact 是 .aar，脚本会解出 classes.jar）
@@ -209,7 +209,7 @@ Requirements: **JDK 17+**, **Android SDK** (with `build-tools` and `platforms;an
 and the **LibXposed API** (downloaded by script).
 
 ```bash
-git clone https://github.com/ihatetheworld404x/HyperOS-Workbench-Blur-Fix.git
+git clone https://github.com/mar08meow/HyperOS-Workbench-Blur-Fix.git
 cd HyperOS-Workbench-Blur-Fix
 
 bash scripts/fetch-libxposed.sh      # downloads io.github.libxposed:api and extracts classes.jar
