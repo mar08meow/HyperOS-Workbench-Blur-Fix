@@ -1,0 +1,25 @@
+# ---- 构建产物 ----
+/build/
+*.apk
+*.apk.idsig
+*.dex
+*.zip
+
+# ---- 本地依赖（由 scripts/fetch-libxposed.sh 下载）----
+/libs/
+*.aar
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# ---- 签名密钥 ----
+*.keystore
+*.jks
+*.p12
+debug.keystore
+
+# ---- 编辑器 / 系统 ----
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db

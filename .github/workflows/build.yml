@@ -1,0 +1,58 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Ensure Android SDK components
+        # ubuntu-latest 自带 Android SDK，这里只是确保 build-tools / platform 齐全
+        run: |
+          SDKMANAGER="$(find "${ANDROID_SDK_ROOT:-$ANDROID_HOME}" -name sdkmanager -type f 2>/dev/null | head -1)"
+          if [ -n "$SDKMANAGER" ]; then
+            yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+            "$SDKMANAGER" "platforms;android-34" "build-tools;34.0.0" > /dev/null 2>&1 || true
+          fi
+          echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          ls "${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+
+      - name: Fetch LibXposed API
+        run: bash scripts/fetch-libxposed.sh
+
+      - name: Build APK
+        run: |
+          chmod +x build.sh scripts/fetch-libxposed.sh
+          bash build.sh
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: HyperOS-Workbench-Blur-Fix
+          path: HyperOS-Workbench-Blur-Fix.apk
+          if-no-files-found: error
+
+      - name: Publish Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: HyperOS-Workbench-Blur-Fix.apk
+          generate_release_notes: true
