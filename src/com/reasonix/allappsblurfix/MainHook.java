@@ -70,6 +70,9 @@ public class MainHook extends XposedModule {
     /** 最近一次 setBlur() 作用的窗口对象（ViewRootImpl），用于配置变化后重新应用。 */
     private volatile Object mBlurWindow;
     private Method mSetBlur;
+    /** 应用列表当前是否处于打开状态。只有打开时才允许重新应用模糊，
+     *  否则会把模糊错误地施加到桌面窗口上（表现为屏幕底部一条模糊带）。 */
+    private volatile boolean mAllAppsOpen;
 
     @Override
     public void onPackageLoaded(XposedModuleInterface.PackageLoadedParam param) {
@@ -91,6 +94,7 @@ public class MainHook extends XposedModule {
                 // （Palette 取色 / setWallpaperHintColorMode / 15% 前景遮罩 /
                 //   mAllAppsController.onAllAppsWallpaperColorChanged()）
                 Object result = chain.proceed();
+                mAllAppsOpen = true;
                 try {
                     Object self = chain.getThisObject();
                     if (self instanceof View) {
@@ -102,6 +106,17 @@ public class MainHook extends XposedModule {
                 }
                 return result;
             });
+
+            // 应用列表关闭时复位状态（release 是 AllAppsBackground 的既有方法）
+            try {
+                Executable release = bgClass.getDeclaredMethod("release");
+                hook(release).intercept(chain -> {
+                    mAllAppsOpen = false;
+                    return chain.proceed();
+                });
+            } catch (Throwable t) {
+                log(Log.WARN, TAG, "hook release failed", t);
+            }
 
             // -------- ② 接管模糊半径，用用户配置值 --------
             Executable radiusOfRatio = wbuClass.getDeclaredMethod("blurRadiusOfRatio", float.class);
@@ -161,8 +176,12 @@ public class MainHook extends XposedModule {
         }
     }
 
-    /** 配置变化后，立刻对已打开的窗口重新应用模糊。 */
+    /** 配置变化后，对已打开的窗口重新应用模糊（仅在应用列表打开时执行）。 */
     private void reapplyBlur() {
+        if (!mAllAppsOpen) {
+            // 应用列表没打开时绝不能动窗口模糊，否则会错误地作用到桌面上
+            return;
+        }
         Object window = mBlurWindow;
         Method setBlur = mSetBlur;
         if (window == null || setBlur == null) {
