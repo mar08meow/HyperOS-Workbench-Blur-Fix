@@ -65,14 +65,27 @@ system_server 里缓存的 `/data/system/users/0/blurwallpaper`。对**第三方
 1. 从 [Releases](../../releases) 下载 `HyperOS-Workbench-Blur-Fix.apk`（或自行构建）
 2. 安装到设备
 3. 打开 LSPosed，启用模块 **AllApps 动态模糊修复**，作用域勾选 **「系统桌面」**（`com.miui.home`）
-4. 重启桌面（`am force-stop com.miui.home`）或重启设备
+4. 重启桌面（安装后用模块自带的「重启系统桌面」按钮即可，见下）
 
 **验证是否生效**：LSPosed 日志里应出现
 
 ```
-(com.miui.home)[com.reasonix.allappsblurfix,AllAppsBlurFix,...] hook installed on
-com.miui.home.launcher.laptop.AllAppsBackground#showBlurEffect
+(com.miui.home)[com.reasonix.allappsblurfix,AllAppsBlurFix,...] hook installed;
+blur radius = 150
 ```
+
+### 设置界面
+
+模块带一个设置界面（桌面图标「**AllApps 动态模糊修复**」），可以：
+
+- **调节模糊强度**：滑块范围 `0 ~ 150`（默认 150 = SurfaceFlinger 允许的窗口模糊上限）
+  - 改完**立即生效**，不需要重启桌面 —— 即使应用列表已经开着，也会立刻重新应用
+- **一键「重启系统桌面」**：更新模块（重装 APK）后，新代码要重启桌面进程才会加载。
+  点这个按钮即可，不用再手动敲命令。**首次使用会请求 root 授权**（KernelSU/Magisk 弹窗，同意一次即可）。
+
+> 模糊半径的实现：hook 了 `WindowBlurUtils.blurRadiusOfRatio(float)`，
+> 原本应用列表只开到 `0.4f`（实际半径 ≈40），现在替换为你的配置值。
+> 配置通过 LSPosed 的 remote preferences 与 hook 侧共享。
 
 ### 从源码构建
 
@@ -194,14 +207,29 @@ through**.
 1. Download `HyperOS-Workbench-Blur-Fix.apk` from [Releases](../../releases) (or build it yourself)
 2. Install it on your device
 3. In LSPosed, enable **AllApps 动态模糊修复** and tick scope **“系统桌面”** (`com.miui.home`)
-4. Restart the launcher (`am force-stop com.miui.home`) or reboot
+4. Restart the launcher — use the module's own **“重启系统桌面”** button (see below)
 
 **Verifying**: the LSPosed log should contain
 
 ```
-(com.miui.home)[com.reasonix.allappsblurfix,AllAppsBlurFix,...] hook installed on
-com.miui.home.launcher.laptop.AllAppsBackground#showBlurEffect
+(com.miui.home)[com.reasonix.allappsblurfix,AllAppsBlurFix,...] hook installed;
+blur radius = 150
 ```
+
+### Settings
+
+The module ships a settings screen (launcher icon **“AllApps 动态模糊修复”**):
+
+- **Blur strength** — slider `0 ~ 150` (default `150` = the maximum window blur radius
+  SurfaceFlinger allows). Takes effect **immediately**, without restarting the launcher;
+  even an already-open app list is re-blurred on the spot.
+- **“Restart launcher”** — after updating the module (reinstalling the APK) the new code only
+  loads when the launcher process restarts. This button does it for you instead of running
+  `am force-stop` manually. **It asks for root on first use** (KernelSU/Magisk prompt — approve once).
+
+> Under the hood the blur radius is applied by hooking `WindowBlurUtils.blurRadiusOfRatio(float)`:
+> the app list originally requests `0.4f` (≈40px), which this module replaces with your configured value.
+> The value is shared with the hook through LSPosed remote preferences.
 
 ### Building from source
 
